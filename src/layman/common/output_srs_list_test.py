@@ -36,7 +36,21 @@ def ensure_layer(delete_layer_after_test):
     yield ensure_layer_internal
 
 
-def test_custom_srs_list(ensure_layer):
+@pytest.fixture(scope="module")
+def ensure_layers(delete_layer_after_test):
+    def ensure_layers_internal(layers):
+        to_publish = [layer for layer in layers if (layer['username'], layer['name']) not in LAYERS_TO_DELETE_AFTER_TEST]
+        to_patch = [layer for layer in layers if (layer['username'], layer['name']) in LAYERS_TO_DELETE_AFTER_TEST]
+        for layer in to_publish:
+            process_client.publish_workspace_layer(**layer)
+            delete_layer_after_test(layer['username'], layer['name'])
+        else:
+            for layer in to_patch:
+                process_client.patch_workspace_layer(**layer)
+    yield ensure_layers_internal
+
+
+def test_custom_srs_list(ensure_layers):
     workspace = 'test_custom_srs_list_workspace'
     layer_sld1 = 'test_custom_srs_list_sld_layer1'
     layer_sld2 = 'test_custom_srs_list_sld_layer2'
@@ -46,8 +60,14 @@ def test_custom_srs_list(ensure_layer):
     assert settings.LAYMAN_OUTPUT_SRS_LIST != OUTPUT_SRS_LIST
 
     process.ensure_layman_function(process.LAYMAN_DEFAULT_SETTINGS)
-    ensure_layer(workspace, layer_sld1)
-    ensure_layer(workspace, layer_qgis1, style_file=source_style_file_path)
+    ensure_layers([{'username': workspace,
+                    'name': layer_sld1,
+                    },
+                   {'username': workspace,
+                    'name': layer_qgis1,
+                    'style_file': source_style_file_path,
+                    },
+                   ])
 
     with app.app_context():
         assert_gs_wms_output_srs_list(workspace, layer_sld1, settings.LAYMAN_OUTPUT_SRS_LIST)
@@ -62,8 +82,15 @@ def test_custom_srs_list(ensure_layer):
     process.ensure_layman_function({
         'LAYMAN_OUTPUT_SRS_LIST': ','.join([str(code) for code in OUTPUT_SRS_LIST])
     })
-    ensure_layer(workspace, layer_sld2)
-    ensure_layer(workspace, layer_qgis2, style_file=source_style_file_path)
+    ensure_layers([{'username': workspace,
+                    'name': layer_sld2,
+                    },
+                   {'username': workspace,
+                    'name': layer_qgis2,
+                    'style_file': source_style_file_path,
+                    },
+                   ])
+
     with app.app_context():
         for layer in [layer_sld1, layer_sld2, ]:
             assert_gs_wms_output_srs_list(workspace, layer, OUTPUT_SRS_LIST)
