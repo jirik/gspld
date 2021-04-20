@@ -197,22 +197,20 @@ ensure_workspace_layer = partial(ensure_workspace_publication, LAYER_TYPE)
 ensure_workspace_map = partial(ensure_workspace_publication, MAP_TYPE)
 
 
-def publish_workspace_publication(publication_type,
-                                  username,
-                                  name,
-                                  file_paths=None,
-                                  headers=None,
-                                  access_rights=None,
-                                  title=None,
-                                  style_file=None,
-                                  description=None,
-                                  check_response_fn=None,
-                                  ):
+def publish_workspace_publication_without_wait(publication_type,
+                                               username,
+                                               name,
+                                               file_paths=None,
+                                               headers=None,
+                                               access_rights=None,
+                                               title=None,
+                                               style_file=None,
+                                               description=None,
+                                               ):
     title = title or name
     headers = headers or {}
     publication_type_def = PUBLICATION_TYPES_DEF[publication_type]
     file_paths = file_paths or [publication_type_def.source_path, ]
-    check_response_fn = check_response_fn or partial(check_response_keys, publication_type_def.keys_to_check)
     if style_file:
         assert publication_type == LAYER_TYPE
 
@@ -245,7 +243,32 @@ def publish_workspace_publication(publication_type,
     finally:
         for fp in files:
             fp[1][1].close()
+    return r
 
+
+def publish_workspace_publication(publication_type,
+                                  username,
+                                  name,
+                                  file_paths=None,
+                                  headers=None,
+                                  access_rights=None,
+                                  title=None,
+                                  style_file=None,
+                                  description=None,
+                                  check_response_fn=None,
+                                  ):
+    publication_type_def = PUBLICATION_TYPES_DEF[publication_type]
+    check_response_fn = check_response_fn or partial(check_response_keys, publication_type_def.keys_to_check)
+    r = publish_workspace_publication_without_wait(publication_type,
+                                                   username,
+                                                   name,
+                                                   file_paths,
+                                                   headers,
+                                                   access_rights,
+                                                   title,
+                                                   style_file,
+                                                   description,
+                                                   )
     with app.app_context():
         url = url_for(publication_type_def.get_workspace_publication_url,
                       username=username,
