@@ -283,7 +283,15 @@ publish_workspace_layer = partial(publish_workspace_publication, LAYER_TYPE)
 
 def publish_publications(publications):
     for publication in publications:
-        publish_workspace_publication(**publication)
+        publish_workspace_publication_without_wait(**publication)
+    for publication in publications:
+        publication_type_def = PUBLICATION_TYPES_DEF[publication['publication_type']]
+        check_response_fn = publication.get('check_response_fn') or partial(check_response_keys, publication_type_def.keys_to_check)
+        with app.app_context():
+            url = url_for(publication_type_def.get_workspace_publication_url,
+                          username=publication['username'],
+                          **{publication_type_def.url_param_name: publication['name']})
+        wait_for_rest(url, 30, 0.5, check_response_fn, headers=publication.get('headers'))
 
 
 def get_workspace_publications_response(publication_type, workspace, headers=None, query_params=None, ):
