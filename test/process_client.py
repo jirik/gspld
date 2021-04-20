@@ -281,6 +281,11 @@ publish_workspace_map = partial(publish_workspace_publication, MAP_TYPE)
 publish_workspace_layer = partial(publish_workspace_publication, LAYER_TYPE)
 
 
+def publish_publications(publications):
+    for publication in publications:
+        publish_workspace_publication(**publication)
+
+
 def get_workspace_publications_response(publication_type, workspace, headers=None, query_params=None, ):
     headers = headers or {}
     query_params = query_params or {}

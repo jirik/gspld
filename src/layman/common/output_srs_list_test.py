@@ -41,8 +41,8 @@ def ensure_layers(delete_layer_after_test):
     def ensure_layers_internal(layers):
         to_publish = [layer for layer in layers if (layer['username'], layer['name']) not in LAYERS_TO_DELETE_AFTER_TEST]
         to_patch = [layer for layer in layers if (layer['username'], layer['name']) in LAYERS_TO_DELETE_AFTER_TEST]
+        process_client.publish_publications(layers)
         for layer in to_publish:
-            process_client.publish_workspace_layer(**layer)
             delete_layer_after_test(layer['username'], layer['name'])
         else:
             for layer in to_patch:
@@ -61,9 +61,11 @@ def test_custom_srs_list(ensure_layers):
 
     process.ensure_layman_function(process.LAYMAN_DEFAULT_SETTINGS)
     ensure_layers([{'username': workspace,
+                    'publication_type': process_client.LAYER_TYPE,
                     'name': layer_sld1,
                     },
                    {'username': workspace,
+                    'publication_type': process_client.LAYER_TYPE,
                     'name': layer_qgis1,
                     'style_file': source_style_file_path,
                     },
@@ -83,9 +85,11 @@ def test_custom_srs_list(ensure_layers):
         'LAYMAN_OUTPUT_SRS_LIST': ','.join([str(code) for code in OUTPUT_SRS_LIST])
     })
     ensure_layers([{'username': workspace,
+                    'publication_type': process_client.LAYER_TYPE,
                     'name': layer_sld2,
                     },
                    {'username': workspace,
+                    'publication_type': process_client.LAYER_TYPE,
                     'name': layer_qgis2,
                     'style_file': source_style_file_path,
                     },
