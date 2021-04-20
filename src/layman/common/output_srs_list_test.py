@@ -41,12 +41,11 @@ def ensure_layers(delete_layer_after_test):
     def ensure_layers_internal(layers):
         to_publish = [layer for layer in layers if (layer['username'], layer['name']) not in LAYERS_TO_DELETE_AFTER_TEST]
         to_patch = [layer for layer in layers if (layer['username'], layer['name']) in LAYERS_TO_DELETE_AFTER_TEST]
-        process_client.publish_publications(layers)
+        process_client.publish_publications(to_publish)
         for layer in to_publish:
             delete_layer_after_test(layer['username'], layer['name'])
         else:
-            for layer in to_patch:
-                process_client.patch_workspace_layer(**layer)
+            process_client.patch_publications(to_patch)
     yield ensure_layers_internal
 
 
