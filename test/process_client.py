@@ -107,20 +107,18 @@ def raise_layman_error(response, status_codes_to_skip=None):
     assert 'Deprecation' not in response.headers, f'This is deprecated URL! Use new one. headers={response.headers}'
 
 
-def patch_workspace_publication(publication_type,
-                                username,
-                                name,
-                                file_paths=None,
-                                headers=None,
-                                access_rights=None,
-                                title=None,
-                                style_file=None,
-                                check_response_fn=None,
-                                ):
+def patch_workspace_publication_without_wait(publication_type,
+                                             username,
+                                             name,
+                                             file_paths=None,
+                                             headers=None,
+                                             access_rights=None,
+                                             title=None,
+                                             style_file=None,
+                                             ):
     headers = headers or {}
     file_paths = file_paths or []
     publication_type_def = PUBLICATION_TYPES_DEF[publication_type]
-    check_response_fn = check_response_fn or partial(check_response_keys, publication_type_def.keys_to_check)
     if style_file:
         assert publication_type == LAYER_TYPE
 
@@ -152,7 +150,30 @@ def patch_workspace_publication(publication_type,
     finally:
         for fp in files:
             fp[1][1].close()
+    return r.json()
 
+
+def patch_workspace_publication(publication_type,
+                                username,
+                                name,
+                                file_paths=None,
+                                headers=None,
+                                access_rights=None,
+                                title=None,
+                                style_file=None,
+                                check_response_fn=None,
+                                ):
+    publication_type_def = PUBLICATION_TYPES_DEF[publication_type]
+    check_response_fn = check_response_fn or partial(check_response_keys, publication_type_def.keys_to_check)
+    r = publish_workspace_publication_without_wait(publication_type,
+                                                   username,
+                                                   name,
+                                                   file_paths,
+                                                   headers,
+                                                   access_rights,
+                                                   title,
+                                                   style_file,
+                                                   )
     with app.app_context():
         url = url_for(publication_type_def.get_workspace_publication_url,
                       username=username,
@@ -161,6 +182,21 @@ def patch_workspace_publication(publication_type,
     wfs.clear_cache(username)
     wms.clear_cache(username)
     return r.json()
+
+
+def patch_publications(publications):
+    for publication in publications:
+        patch_workspace_publication_without_wait(**publication)
+    for publication in publications:
+        publication_type_def = PUBLICATION_TYPES_DEF[publication['publication_type']]
+        check_response_fn = publication.get('check_response_fn') or partial(check_response_keys, publication_type_def.keys_to_check)
+        with app.app_context():
+            url = url_for(publication_type_def.get_workspace_publication_url,
+                          username=publication['username'],
+                          **{publication_type_def.url_param_name: publication['name']})
+        wait_for_rest(url, 30, 0.5, check_response_fn, headers=publication.get('headers'))
+        wfs.clear_cache(publication['username'])
+        wms.clear_cache(publication['username'])
 
 
 patch_workspace_map = partial(patch_workspace_publication, MAP_TYPE)
