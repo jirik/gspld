@@ -72,6 +72,8 @@ def ensure_workspace(username, conn_cur=None):
         cur.execute(
             f"""CREATE SCHEMA IF NOT EXISTS "{username}" AUTHORIZATION {settings.LAYMAN_PG_USER}""")
         conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        logger.warning(f'Duplication error during DB schema creation')
     except BaseException as exc:
         logger.error(f'ensure_workspace ERROR')
         raise LaymanError(7) from exc
