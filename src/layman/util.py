@@ -10,7 +10,7 @@ import logging
 from flask import current_app, request, url_for as flask_url_for, jsonify
 from unidecode import unidecode
 
-from layman import settings
+from layman import settings, celery as celery_util
 from layman.http import LaymanError
 
 logger = logging.getLogger(__name__)
@@ -306,6 +306,16 @@ def get_publication_info(workspace, publ_type, publ_name, context=None):
     result = {}
     for pi in partial_infos.values():
         result.update(pi)
+
+    if result:
+        chain_info = celery_util.get_publication_chain_info(workspace, publ_type, publ_name)
+        if chain_info is None or celery_util.is_chain_successful(chain_info):
+            publication_status = 'COMPLETE'
+        elif celery_util.is_chain_failed(chain_info):
+            publication_status = 'INCOMPLETE'
+        else:
+            publication_status = 'UPDATING'
+        result['layman_metadata'] = {'publication_status': publication_status}
 
     if 'actor_name' in context:
         actor = context['actor_name']

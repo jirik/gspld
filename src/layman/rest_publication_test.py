@@ -1,7 +1,10 @@
+import time
+
 from test import process_client
 import pytest
 
 from layman import LaymanError, settings
+from layman.common import empty_method_returns_true
 from layman.common.micka import util as micka_util
 
 db_schema = settings.LAYMAN_PRIME_SCHEMA
@@ -107,3 +110,20 @@ class TestSoapClass:
             anon_number_of_records = micka_util.get_number_of_records(publ_muuid, use_authn=False)
             assert bool(anon_number_of_records) == anonymous_visibility, \
                 f"muuid={publ_muuid}, access_rights={access_rights}, number_of_records={anon_number_of_records}"
+
+
+@pytest.mark.parametrize('publ_type', process_client.PUBLICATION_TYPES)
+@pytest.mark.usefixtures('ensure_layman')
+def test_get_publication_laymen_status(publ_type):
+    workspace = 'test_get_publication_laymen_status_workspace'
+    publication = 'test_get_publication_laymen_status_publication'
+
+    process_client.publish_workspace_publication(publ_type, workspace, publication, check_response_fn=empty_method_returns_true, file_paths=['sample/data/zero_length_attribute.geojson'])
+
+    time.sleep(5)
+    info = process_client.get_workspace_publication(publ_type, workspace, publication,)
+    assert 'layman_metadata' in info, f'info={info}'
+    assert 'publication_status' in info['layman_metadata'], f'info={info}'
+    print(f'\n\ntest_get_publication_laymen_status: publication_status={info["layman_metadata"]["publication_status"]}\n\n')
+
+    process_client.delete_workspace_publication(publ_type, workspace, publication)

@@ -117,6 +117,9 @@ def get_complete_layer_info(username=None, layername=None, cached=False):
         'url': url_for('rest_workspace_layer.get', layername=layername, workspace=username),
         'title': layername,
         'description': '',
+        'layman_metadata': {
+            'publication_status': 'NOT_AVAILABLE',
+        },
         'wms': {
             'status': 'NOT_AVAILABLE'
         },
