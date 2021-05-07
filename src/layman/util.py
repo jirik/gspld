@@ -387,3 +387,9 @@ def delete_publications(user,
         for (name, info) in whole_infos.items()
     ]
     return jsonify(infos)
+
+
+def patch_after_wfst(workspace, publication_type, layername, ):
+    from layman.layer import LAYER_TYPE, util as layer_util
+    if publication_type == LAYER_TYPE:
+        layer_util.patch_after_wfst(workspace, layername)

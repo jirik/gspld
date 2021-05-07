@@ -159,6 +159,7 @@ def test_wms_ows_proxy(service_endpoint):
     client_util.delete_workspace_layer(username, layername, headers=authn_headers)
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.usefixtures('ensure_layman', 'liferay_mock')
 @pytest.mark.parametrize('style_file', [
     None,
@@ -296,8 +297,6 @@ def test_missing_attribute(style_file, ):
     data_xml = data_wfs.get_wfs11_insert_polygon_new_attr(username, layername, attr_names10)
     wfs_post(username, [(layername, attr_names10)], data_xml)
 
-    time.sleep(5)
-
     client_util.delete_workspace_layer(username, layername, headers=headers)
     client_util.delete_workspace_layer(username, layername2, headers=headers)
 
@@ -366,8 +365,6 @@ def test_missing_attribute_authz():
     attr_names = ['inexisting_attribute_auth3', 'inexisting_attribute_auth4']
     data_xml = data_wfs.get_wfs20_update_points_new_attr(username, layername1, attr_names)
     do_test(data_xml, attr_names)
-
-    time.sleep(5)
 
     client_util.delete_workspace_layer(username, layername1, headers=headers1)
 

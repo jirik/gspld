@@ -68,7 +68,7 @@ def get_wms_direct(username):
     from .util import wms_direct
     key = get_flask_proxy_key(username)
     redis_obj = settings.LAYMAN_REDIS.hgetall(key)
-    string_value = redis_obj['value'] if redis_obj is not None else None
+    string_value = redis_obj['value'] if redis_obj else None
     return wms_direct(ows_url, xml=string_value, headers=headers)
 
 

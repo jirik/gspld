@@ -8,7 +8,7 @@ from lxml import etree as ET
 from requests.exceptions import HTTPError, ConnectionError
 from flask import current_app
 
-from layman import settings, LaymanError
+from layman import common, settings, LaymanError
 from layman.common import language as common_language, empty_method, empty_method_returns_none, bbox as bbox_util
 from layman.common.filesystem.uuid import get_publication_uuid_file
 from layman.common.micka import util as common_util
@@ -79,7 +79,7 @@ def patch_map(workspace, mapname, metadata_properties_to_refresh=None, actor_nam
         return None
     # current_app.logger.info(f"Current element=\n{ET.tostring(el, encoding='unicode', pretty_print=True)}")
 
-    _, prop_values = get_template_path_and_values(workspace, mapname, http_method='patch', actor_name=actor_name)
+    _, prop_values = get_template_path_and_values(workspace, mapname, http_method=common.REQUEST_METHOD_PATCH, actor_name=actor_name)
     prop_values = {
         k: v for k, v in prop_values.items()
         if k in metadata_properties_to_refresh + ['md_date_stamp']
@@ -102,7 +102,7 @@ def patch_map(workspace, mapname, metadata_properties_to_refresh=None, actor_nam
 
 
 def csw_insert(username, mapname, actor_name):
-    template_path, prop_values = get_template_path_and_values(username, mapname, http_method='post', actor_name=actor_name)
+    template_path, prop_values = get_template_path_and_values(username, mapname, http_method=common.REQUEST_METHOD_POST, actor_name=actor_name)
     record = common_util.fill_xml_template_as_pretty_str(template_path, prop_values, METADATA_PROPERTIES)
     try:
         muuid = common_util.csw_insert({
@@ -176,7 +176,7 @@ def map_json_to_epsg_codes(map_json):
 
 
 def get_template_path_and_values(username, mapname, http_method=None, actor_name=None):
-    assert http_method in ['post', 'patch']
+    assert http_method in [common.REQUEST_METHOD_POST, common.REQUEST_METHOD_PATCH]
     uuid_file_path = get_publication_uuid_file(MAP_TYPE, username, mapname)
     publ_datetime = datetime.fromtimestamp(os.path.getmtime(uuid_file_path))
     revision_date = datetime.now()
@@ -214,7 +214,7 @@ def get_template_path_and_values(username, mapname, http_method=None, actor_name
         operates_on=operates_on,
         md_language=md_language,
     )
-    if http_method == 'post':
+    if http_method == common.REQUEST_METHOD_POST:
         prop_values.pop('revision_date', None)
     template_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'record-template.xml')
     return template_path, prop_values

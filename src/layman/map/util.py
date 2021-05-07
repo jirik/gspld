@@ -221,8 +221,7 @@ def _get_map_chain(username, mapname):
 
 
 def abort_map_chain(username, mapname):
-    chain_info = _get_map_chain(username, mapname)
-    celery_util.abort_chain(chain_info)
+    celery_util.abort_publication_chain(username, MAP_TYPE, mapname)
 
 
 def is_map_chain_ready(username, mapname):
