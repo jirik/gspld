@@ -2,7 +2,7 @@ import json
 from functools import wraps
 from flask import after_this_request, request
 
-from layman import LaymanError, settings, authn, util as layman_util
+from layman import LaymanError, settings, authn, util as layman_util, common
 from layman.common.prime_db_schema import workspaces, users
 from layman.common.rest import parse_request_path
 
@@ -16,11 +16,11 @@ def authorize(workspace, publication_type, publication_name, request_method, act
     }[publication_type]
 
     if is_multi_publication_request:
-        if request_method in ['GET', 'DELETE']:
+        if request_method.lower() in [common.REQUEST_METHOD_GET, common.REQUEST_METHOD_DELETE]:
             if not workspaces.get_workspace_infos(workspace):
                 raise LaymanError(40)  # Workspace not found
             return
-        if request_method in ['POST']:
+        if request_method.lower() in [common.REQUEST_METHOD_POST]:
             if actor_name == workspace:
                 return
             if ((not users.get_user_infos(workspace))  # public workspace
@@ -45,11 +45,12 @@ def authorize(workspace, publication_type, publication_name, request_method, act
         if not publ_info:
             raise LaymanError(publication_not_found_code)
         user_can_read = is_user_in_access_rule(actor_name, publ_info['access_rights']['read'])
-        if request_method in ['GET']:
+        if request_method.lower() in [common.REQUEST_METHOD_GET]:
             if user_can_read:
                 return
             raise LaymanError(publication_not_found_code)
-        if request_method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+        if request_method.lower() in [common.REQUEST_METHOD_PATCH, common.REQUEST_METHOD_DELETE,
+                                      common.REQUEST_METHOD_POST, common.REQUEST_METHOD_PUT, ]:
             if is_user_in_access_rule(actor_name, publ_info['access_rights']['write']):
                 return
             if user_can_read:
@@ -113,7 +114,7 @@ def authorize_workspace_publications_decorator(f):
         actor_name = authn.get_authn_username()
         # raises exception in case of unauthorized request
         authorize(workspace, publication_type, publication_name, request.method, actor_name)
-        if workspace and publication_type and not publication_name and request.method == 'GET':
+        if workspace and publication_type and not publication_name and request.method == common.REQUEST_METHOD_GET:
             # pylint: disable=unused-variable
             @after_this_request
             def authorize_after_request_tmp(response):
@@ -132,7 +133,7 @@ def authorize_publications_decorator(f):
         if publication_type is None or workspace or publication_name:
             raise Exception(f"Authorization module is unable to authorize path {req_path}")
         actor_name = authn.get_authn_username()
-        if request.method == 'GET':
+        if request.method == common.REQUEST_METHOD_GET:
             # pylint: disable=unused-variable
             @after_this_request
             def authorize_after_request_tmp(response):

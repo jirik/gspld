@@ -163,7 +163,7 @@ def check_redis_consistency(expected_publ_num_by_type=None):
             t for t in task_names_tuples
             if t[1] == username and t[2] == pubname and t[0].startswith(publ_type_name)
         ), None) is None) is is_ready, f"{username}, {publ_type_name}, {pubname}: {is_ready}, {task_names_tuples}"
-        assert (redis.hget(celery_util.TASK_ID_TO_PUBLICATION, chain_info['last'].task_id) is None) is is_ready
+        assert (redis.hget(celery_util.LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION, chain_info['last'].task_id) is None) is is_ready
 
     # publication locks
     locks = redis.hgetall(redis_util.PUBLICATION_LOCKS_KEY)

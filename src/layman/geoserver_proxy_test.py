@@ -159,6 +159,7 @@ def test_wms_ows_proxy(service_endpoint):
     client_util.delete_workspace_layer(username, layername, headers=authn_headers)
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.usefixtures('ensure_layman', 'liferay_mock')
 @pytest.mark.parametrize('style_file', [
     None,

@@ -75,7 +75,7 @@ def post(workspace):
 
     mapurl = url_for('rest_workspace_map.get', mapname=mapname, workspace=workspace)
 
-    redis_util.lock_publication(workspace, MAP_TYPE, mapname, request.method)
+    redis_util.create_lock(workspace, MAP_TYPE, mapname, 29, request.method)
 
     try:
         map_result = {
