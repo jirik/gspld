@@ -1,5 +1,5 @@
 from urllib.parse import urljoin
-from test import process_client, util
+from test import process_client, assert_util
 import requests
 import pytest
 
@@ -53,7 +53,7 @@ def test_sld_style_applied_in_wms():
 
     url = f"http://{settings.LAYMAN_SERVER_NAME}/geoserver/{workspace}_wms/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES=&LAYERS={workspace}:{layer}&SRS=EPSG:3857&WIDTH=768&HEIGHT=752&BBOX=-30022616.05686392,-30569903.32873383,30022616.05686392,28224386.44929134"
 
-    util.assert_same_images(url, obtained_file, expected_file, 2000)
+    assert_util.assert_same_images(url, obtained_file, expected_file, 2000)
 
     process_client.delete_workspace_layer(workspace,
                                           layer)

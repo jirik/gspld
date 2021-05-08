@@ -1,5 +1,5 @@
 import datetime
-from test import process_client, util as test_util, data as test_data
+from test import process_client, assert_util, data as test_data
 import pytest
 
 from db import util as db_util
@@ -188,6 +188,6 @@ def test_adjust_prime_db_schema_for_bbox_search():
             results = db_util.run_query(query, (workspace, publication_type, publication))
             assert len(results) == 1 and len(results[0]) == 4, results
             bbox = results[0]
-            test_util.assert_same_bboxes(bbox, expected_bbox, 0.000001)
+            assert_util.assert_same_bboxes(bbox, expected_bbox, 0.000001)
 
     process_client.delete_workspace_layer(workspace, layer)

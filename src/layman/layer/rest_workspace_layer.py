@@ -112,7 +112,8 @@ def patch(workspace, layername):
     layer_result = {}
 
     if delete_from is not None:
-        deleted = util.delete_layer(workspace, layername, source=delete_from, http_method='patch')
+        request_method = request.method.lower()
+        deleted = util.delete_layer(workspace, layername, source=delete_from, http_method=request_method)
         if style_file is None:
             try:
                 style_file = deleted['style']['file']
@@ -127,7 +128,7 @@ def patch(workspace, layername):
         kwargs.update({
             'crs_id': crs_id,
             'ensure_user': False,
-            'http_method': 'patch',
+            'http_method': request_method,
             'metadata_properties_to_refresh': props_to_refresh,
         })
 

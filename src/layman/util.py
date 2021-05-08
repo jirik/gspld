@@ -10,7 +10,8 @@ import logging
 from flask import current_app, request, url_for as flask_url_for, jsonify
 from unidecode import unidecode
 
-from layman import settings
+from layman import settings, celery as celery_util
+from layman.common import tasks as tasks_util
 from layman.http import LaymanError
 
 logger = logging.getLogger(__name__)
@@ -387,3 +388,10 @@ def delete_publications(user,
         for (name, info) in whole_infos.items()
     ]
     return jsonify(infos)
+
+
+def patch_after_wfst(workspace, publication_type, publication, **kwargs):
+    task_methods = tasks_util.get_source_task_methods(get_publication_types()[publication_type], 'patch_after_wfst')
+    patch_chain = tasks_util.get_chain_of_methods(workspace, publication, task_methods, kwargs, 'layername')
+    res = patch_chain()
+    celery_util.set_publication_chain_info(workspace, publication_type, publication, task_methods, res)

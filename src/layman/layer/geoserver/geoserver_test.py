@@ -1,4 +1,4 @@
-from test import process_client, util as test_util, data as test_data
+from test import process_client, assert_util, data as test_data
 import pytest
 
 from layman import app, settings
@@ -46,8 +46,8 @@ def test_geoserver_bbox():
 
     process_client.publish_workspace_layer(workspace, layer, style_file='sample/style/small_layer.qml')
 
-    test_util.assert_wfs_bbox(workspace, layer, expected_bbox_1)
-    test_util.assert_wms_bbox(workspace, layer, expected_bbox_1)
+    assert_util.assert_wfs_bbox(workspace, layer, expected_bbox_1)
+    assert_util.assert_wms_bbox(workspace, layer, expected_bbox_1)
 
     # test WFS
     for bbox, expected_bbox in expected_bboxes:
@@ -61,7 +61,7 @@ def test_geoserver_bbox():
                                     ensure_user=False,
                                     access_rights=None,
                                     )
-        test_util.assert_wfs_bbox(workspace, layer, expected_bbox)
+        assert_util.assert_wfs_bbox(workspace, layer, expected_bbox)
 
     # test WMS
     for bbox, expected_bbox in expected_bboxes:
@@ -74,7 +74,7 @@ def test_geoserver_bbox():
                                     ensure_user=False,
                                     access_rights=None,
                                     )
-        test_util.assert_wms_bbox(workspace, layer, expected_bbox)
+        assert_util.assert_wms_bbox(workspace, layer, expected_bbox)
 
     # test cascade WMS from QGIS
     for bbox, expected_bbox in expected_bboxes:
@@ -88,6 +88,6 @@ def test_geoserver_bbox():
                                     ensure_user=False,
                                     access_rights=None,
                                     )
-        test_util.assert_wms_bbox(workspace, layer, expected_bbox)
+        assert_util.assert_wms_bbox(workspace, layer, expected_bbox)
 
     process_client.delete_workspace_layer(workspace, layer)

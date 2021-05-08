@@ -1,5 +1,5 @@
 import math
-from test import process, process_client, geoserver_client, util
+from test import process, process_client, geoserver_client, assert_util
 import pytest
 
 from layman import settings, app
@@ -171,4 +171,4 @@ def test_spatial_precision_wms(ensure_layer, epsg_code, extent, img_size, style_
     num_circles = 5
     pixel_diff_limit = circle_perimeter * num_circles * diff_line_width
 
-    util.assert_same_images(url, obtained_file, expected_file, pixel_diff_limit)
+    assert_util.assert_same_images(url, obtained_file, expected_file, pixel_diff_limit)

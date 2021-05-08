@@ -3,7 +3,7 @@ import pathlib
 import shutil
 import os
 from collections import namedtuple
-from test import process_client, util
+from test import process_client, util, assert_util
 from test.util import url_for
 import pytest
 
@@ -142,7 +142,7 @@ def test_migrate_layers_to_wms_workspace(ensure_layer):
                   f"BBOX=-30022616.05686392,-30569903.32873383,30022616.05686392,28224386.44929134"
 
     obtained_file = 'tmp/artifacts/test_migrate_layers_to_wms_workspace_before_migration.png'
-    util.assert_same_images(old_wms_url, obtained_file, expected_file, 2000)
+    assert_util.assert_same_images(old_wms_url, obtained_file, expected_file, 2000)
 
     with app.app_context():
         upgrade_v1_10.migrate_layers_to_wms_workspace(workspace)
@@ -170,7 +170,7 @@ def test_migrate_layers_to_wms_workspace(ensure_layer):
                   f"LAYERS={wms_workspace}:{layer}&SRS=EPSG:3857&WIDTH=768&HEIGHT=752&" \
                   f"BBOX=-30022616.05686392,-30569903.32873383,30022616.05686392,28224386.44929134"
     obtained_file2 = 'tmp/artifacts/test_migrate_layers_to_wms_workspace_after_migration.png'
-    util.assert_same_images(new_wms_url, obtained_file2, expected_file, 2000)
+    assert_util.assert_same_images(new_wms_url, obtained_file2, expected_file, 2000)
 
     process_client.delete_workspace_layer(workspace, layer)
 

@@ -126,7 +126,7 @@ def post(workspace):
         filenames = [f.filename for f in files]
     input_file.check_filenames(workspace, layername, filenames, check_crs)
 
-    redis_util.lock_publication(workspace, LAYER_TYPE, layername, request.method)
+    redis_util.create_lock(workspace, LAYER_TYPE, layername, 19, request.method)
 
     try:
         # register layer uuid

@@ -1,13 +1,15 @@
 import json
+import importlib
 from flask import current_app
 from celery.contrib.abortable import AbortableAsyncResult
 
-from layman import settings
+from layman import settings, common
 from layman.common import redis as redis_util
 
 REDIS_CURRENT_TASK_NAMES = f"{__name__}:CURRENT_TASK_NAMES"
-PUBLICATION_CHAIN_INFOS = f'{__name__}:PUBLICATION_TASK_INFOS'
-TASK_ID_TO_PUBLICATION = f'{__name__}:TASK_ID_TO_PUBLICATION'
+PUBLICATION_CHAIN_INFOS = f'{__name__}:PUBLICATION_CHAIN_INFOS'
+LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION = f'{__name__}:LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION'
+RUN_AFTER_CHAIN = f'{__name__}:RUN_AFTER_CHAIN'
 
 
 def task_prerun(workspace, _publication_type, publication_name, _task_id, task_name):
@@ -25,25 +27,72 @@ def task_postrun(workspace, publication_type, publication_name, task_id, task_na
     task_hash = _get_task_hash(task_name, workspace, publication_name)
     rds.srem(key, task_hash)
 
-    key = TASK_ID_TO_PUBLICATION
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
     hash = task_id
     if rds.hexists(key, hash):
-        finnish_publication_task(task_id)
+        finnish_publication_chain(task_id)
+        next_task = pop_step_to_run_after_chain(workspace, publication_type, publication_name)
+        if next_task:
+            module_name, method_name = next_task.split('::')
+            module = importlib.import_module(module_name)
+            method = getattr(module, method_name)
+            method(workspace, publication_type, publication_name)
     elif task_state == 'FAILURE':
         chain_info = get_publication_chain_info_dict(workspace, publication_type, publication_name)
         if chain_info is not None:
             last_task_id = chain_info['last']
-            finnish_publication_task(last_task_id)
+            finnish_publication_chain(last_task_id)
 
 
 def _get_task_hash(task_name, workspace, publication_name):
     return f"{task_name}:{workspace}:{publication_name}"
 
 
-def finnish_publication_task(task_id):
+def push_step_to_run_after_chain(workspace, publication_type, publication_name, step_code, ):
     rds = settings.LAYMAN_REDIS
-    key = TASK_ID_TO_PUBLICATION
-    hash = task_id
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
+    hash = _get_publication_hash(workspace, publication_type, publication_name)
+    val = rds.hget(key, hash)
+    queue = json.loads(val) if val is not None else list()
+    if step_code not in queue:
+        queue.append(step_code)
+    rds.hset(key, hash, json.dumps(queue))
+
+
+def pop_step_to_run_after_chain(workspace, publication_type, publication_name, ):
+    rds = settings.LAYMAN_REDIS
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
+    hash = _get_publication_hash(workspace, publication_type, publication_name)
+    val = rds.hget(key, hash)
+    result = None
+    if val:
+        queue = json.loads(val)
+        if len(queue) > 0:
+            result = queue.pop(0)
+            rds.hset(key, hash, json.dumps(queue))
+    return result
+
+
+def get_run_after_chain_queue(workspace, publication_type, publication_name, ):
+    rds = settings.LAYMAN_REDIS
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
+    hash = _get_publication_hash(workspace, publication_type, publication_name)
+    val = rds.hget(key, hash)
+    queue = json.loads(val) if val is not None else list()
+    return queue
+
+
+def clear_steps_to_run_after_chain(workspace, publication_type, publication_name, ):
+    rds = settings.LAYMAN_REDIS
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
+    hash = _get_publication_hash(workspace, publication_type, publication_name)
+    rds.hdel(key, hash)
+
+
+def finnish_publication_chain(last_task_id_in_chain):
+    rds = settings.LAYMAN_REDIS
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
+    hash = last_task_id_in_chain
     publ_hash = rds.hget(key, hash)
     if publ_hash is None:
         return
@@ -56,7 +105,7 @@ def finnish_publication_task(task_id):
     rds.hdel(key, hash)
 
     lock = redis_util.get_publication_lock(username, publication_type, publication_name)
-    if lock in ['patch', 'post', 'wfst', ]:
+    if lock in [common.REQUEST_METHOD_PATCH, common.REQUEST_METHOD_POST, common.PUBLICATION_LOCK_CODE_WFST, ]:
         redis_util.unlock_publication(username, publication_type, publication_name)
 
 
@@ -132,7 +181,7 @@ def set_publication_chain_info(workspace, publication_type, publication_name, ta
     set_publication_chain_info_dict(workspace, publication_type, publication_name, chain_info)
 
     rds = settings.LAYMAN_REDIS
-    key = TASK_ID_TO_PUBLICATION
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
     val = _get_publication_hash(workspace, publication_type, publication_name)
     hash = chain_info['last']
     rds.hset(key, hash, val)
@@ -143,7 +192,13 @@ def abort_chain(chain_info):
         return
 
     abort_task_chain(chain_info['by_order'], chain_info['by_name'])
-    finnish_publication_task(chain_info['last'].task_id)
+    finnish_publication_chain(chain_info['last'].task_id)
+
+
+def abort_publication_chain(workspace, publication_type, publication_name):
+    chain_info = get_publication_chain_info(workspace, publication_type, publication_name)
+    abort_chain(chain_info)
+    clear_steps_to_run_after_chain(workspace, publication_type, publication_name)
 
 
 def abort_task_chain(results_by_order, results_by_name=None):
@@ -198,7 +253,7 @@ def delete_publication(workspace, publication_type, publication_name):
     hash = _get_publication_hash(workspace, publication_type, publication_name)
     rds.hdel(key, hash)
 
-    key = TASK_ID_TO_PUBLICATION
+    key = LAST_TASK_ID_IN_CHAIN_TO_PUBLICATION
     rds.hdel(key, task_id)
 
 

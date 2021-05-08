@@ -6,7 +6,7 @@ from flask import current_app, request, g
 from layman import LaymanError, patch_mode, util as layman_util
 from layman.util import call_modules_fn, get_providers_from_source_names, get_internal_sources, \
     to_safe_name, url_for
-from layman import celery as celery_util
+from layman import celery as celery_util, common
 from layman.common import redis as redis_util, tasks as tasks_util, metadata as metadata_common
 from layman.common.util import PUBLICATION_NAME_PATTERN, clear_publication_info
 from . import get_layer_sources, LAYER_TYPE, get_layer_type_def
@@ -194,11 +194,7 @@ TASKS_TO_LAYER_INFO_KEYS = {
 
 
 def patch_after_wfst(workspace, layername, **kwargs):
-    task_methods = tasks_util.get_source_task_methods(get_layer_type_def(), 'patch_after_wfst')
-    patch_chain = tasks_util.get_chain_of_methods(workspace, layername, task_methods, kwargs, 'layername')
-    res = patch_chain()
-
-    celery_util.set_publication_chain_info(workspace, LAYER_TYPE, layername, task_methods, res)
+    layman_util.patch_after_wfst(workspace, LAYER_TYPE, layername, **kwargs)
 
 
 def delete_layer(workspace, layername, source=None, http_method='delete'):
@@ -208,7 +204,7 @@ def delete_layer(workspace, layername, source=None, http_method='delete'):
     ), 0)
     end_idx = None if source_idx == 0 else source_idx - 1
     sources = sources[:end_idx:-1]
-    if http_method == 'patch':
+    if http_method == common.REQUEST_METHOD_PATCH:
         sources = [
             m for m in sources
             if m.PATCH_MODE == patch_mode.DELETE_IF_DEPENDANT
@@ -230,8 +226,7 @@ def _get_layer_chain(username, layername):
 
 
 def abort_layer_chain(username, layername):
-    chain_info = _get_layer_chain(username, layername)
-    celery_util.abort_chain(chain_info)
+    celery_util.abort_publication_chain(username, LAYER_TYPE, layername)
 
 
 def is_layer_chain_ready(username, layername):
